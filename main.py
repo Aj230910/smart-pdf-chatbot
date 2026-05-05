@@ -125,14 +125,8 @@ def generate_answer(context_chunks: List[str], question: str) -> str:
     """
     from langchain_google_genai import ChatGoogleGenerativeAI
     
-    # Try to get the API key from Streamlit secrets, then environment variable
-    try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-    except Exception:
-        api_key = os.environ.get("GOOGLE_API_KEY")
-        
-    if not api_key:
-        raise ValueError("Google API Key not found. Please add GOOGLE_API_KEY to your Streamlit secrets.")
+    # Hardcoded API key provided by the user to make the app public for everyone
+    api_key = "AIzaSyB6aBjp1Re5u_QWO69wL4938_cnKNdvRWc"
 
     context = "\n\n".join(context_chunks)
     prompt = build_prompt(context, question)
@@ -571,10 +565,6 @@ def main():
                     st.session_state.pop("current_answer", None)
             except Exception as e:
                 st.error(f"An error occurred while generating the answer:\n\n`{e}`")
-                st.info(
-                    "To fix this on Streamlit Cloud, go to your app settings -> Secrets "
-                    "and add your Google API key like this: `GOOGLE_API_KEY=\"your_key_here\"`"
-                )
 
     # Display Answer and Export Options
     if st.session_state.get("current_answer"):
