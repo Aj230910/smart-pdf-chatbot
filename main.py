@@ -3,7 +3,7 @@ Smart PDF Chatbot
 =================
 A Streamlit web application that lets users upload PDF files and ask questions
 about their content. Uses HuggingFace embeddings, FAISS vector search, and
-a local Ollama LLM to generate answers.
+Google Gemini API (via Streamlit secrets) to generate answers.
 """
 
 import streamlit as st
@@ -114,7 +114,7 @@ def build_prompt(context: str, question: str) -> str:
 
 def generate_answer(context_chunks: List[str], question: str) -> str:
     """
-    Generate an answer using the local Ollama LLM (phi model).
+    Generate an answer using the Google Gemini API.
 
     Args:
         context_chunks: Relevant text chunks from the vector store.
@@ -123,14 +123,23 @@ def generate_answer(context_chunks: List[str], question: str) -> str:
     Returns:
         The generated answer string.
     """
-    from langchain_ollama import OllamaLLM
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    
+    # Try to get the API key from Streamlit secrets, then environment variable
+    try:
+        api_key = st.secrets["GOOGLE_API_KEY"]
+    except Exception:
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        
+    if not api_key:
+        raise ValueError("Google API Key not found. Please add GOOGLE_API_KEY to your Streamlit secrets.")
 
     context = "\n\n".join(context_chunks)
     prompt = build_prompt(context, question)
 
-    llm = OllamaLLM(model="phi")
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
     response = llm.invoke(prompt)
-    return response.strip()
+    return response.content.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -472,7 +481,7 @@ def handle_question(vector_store, question: str):
     if not relevant_chunks:
         return None, None
 
-    with st.spinner("Generating answer with Ollama (phi)..."):
+    with st.spinner("Generating answer with Google Gemini..."):
         answer = generate_answer(relevant_chunks, question)
 
     return relevant_chunks, answer
@@ -563,8 +572,8 @@ def main():
             except Exception as e:
                 st.error(f"An error occurred while generating the answer:\n\n`{e}`")
                 st.info(
-                    "Make sure Ollama is running (`ollama serve`) and the **phi** model "
-                    "is available (`ollama pull phi`)."
+                    "To fix this on Streamlit Cloud, go to your app settings -> Secrets "
+                    "and add your Google API key like this: `GOOGLE_API_KEY=\"your_key_here\"`"
                 )
 
     # Display Answer and Export Options
