@@ -28,7 +28,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     return "\n".join(text_parts)
 
 
-def split_text_into_chunks(text: str, chunk_size: int = 500, overlap: int = 100) -> List[str]:
+def split_text_into_chunks(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
     """
     Split text into overlapping chunks for better context retrieval.
 
@@ -80,7 +80,7 @@ def build_vector_store(chunks: List[str]):
     return vector_store
 
 
-def similarity_search(vector_store, query: str, k: int = 4) -> List[str]:
+def similarity_search(vector_store, query: str, k: int = 15) -> List[str]:
     """
     Retrieve the top-k most relevant chunks for a given query.
 
@@ -103,10 +103,12 @@ def similarity_search(vector_store, query: str, k: int = 4) -> List[str]:
 def build_prompt(context: str, question: str) -> str:
     """Build a prompt that instructs the LLM to answer from context."""
     return (
-        "You are a helpful assistant. Use ONLY the following context to answer "
-        "the question. If the answer is not in the context, say "
-        "\"I couldn't find that information in the document.\"\n\n"
-        f"Context:\n{context}\n\n"
+        "You are a helpful and intelligent assistant. You have been provided with extracted text from a PDF document. "
+        "Please answer the user's question based on this context. "
+        "If the exact answer isn't fully detailed in the context, use the context as much as possible, "
+        "but you may use your general knowledge to fill in the gaps and provide a complete, helpful explanation. "
+        "If the document has absolutely nothing to do with the question, just use your general knowledge to answer it.\n\n"
+        f"Context from PDF:\n{context}\n\n"
         f"Question: {question}\n\n"
         "Answer:"
     )
