@@ -522,7 +522,6 @@ def main():
     if "current_file_id" not in st.session_state or st.session_state.current_file_id != file_id:
         st.session_state.current_file_id = file_id
         st.session_state.vector_store = None
-        st.session_state.chat_history = []  # Added chat history
         st.session_state.pop("current_answer", None)
         st.session_state.pop("relevant_chunks", None)
         st.session_state.pop("current_question", None)
@@ -539,16 +538,6 @@ def main():
             unsafe_allow_html=True,
         )
 
-    # ---- Chat History Display ----
-    if "chat_history" in st.session_state and st.session_state.chat_history:
-        st.markdown("### Chat History")
-        for chat in st.session_state.chat_history:
-            st.markdown(
-                f'<div class="answer-box"><strong>Q: {chat["question"]}</strong><br><br>{chat["answer"]}</div>',
-                unsafe_allow_html=True
-            )
-        st.markdown("<br>", unsafe_allow_html=True)
-
     # ---- Question Input ----
     st.markdown("### Ask a Question")
     question = st.text_input(
@@ -559,10 +548,11 @@ def main():
 
     col1, col2, _ = st.columns([1, 1, 3])
     ask_clicked = col1.button("Get Answer", type="primary", use_container_width=True)
-    clear_clicked = col2.button("Clear History", use_container_width=True)
+    clear_clicked = col2.button("Clear", use_container_width=True)
 
     if clear_clicked:
-        st.session_state.chat_history = []
+        st.session_state.vector_store = None
+        st.session_state.current_file_id = None
         st.session_state.pop("current_answer", None)
         st.session_state.pop("relevant_chunks", None)
         st.session_state.pop("current_question", None)
@@ -578,21 +568,38 @@ def main():
                     st.session_state.relevant_chunks = chunks
                     st.session_state.current_answer = ans
                     st.session_state.current_question = question.strip()
-                    
-                    # Add to chat history
-                    if "chat_history" not in st.session_state:
-                        st.session_state.chat_history = []
-                    st.session_state.chat_history.append({
-                        "question": question.strip(),
-                        "answer": ans
-                    })
-                    st.rerun()
                 else:
                     st.warning("No relevant passages found in the document for your question.")
                     st.session_state.pop("current_answer", None)
             except Exception as e:
                 st.error(f"An error occurred while generating the answer:\n\n`{e}`")
                 st.info("Make sure your Google API Key is valid and has access to the Gemini model.")
+
+    # Display Answer and Export Options
+    if st.session_state.get("current_answer"):
+        with st.expander("Retrieved Context", expanded=False):
+            for i, chunk in enumerate(st.session_state.relevant_chunks, 1):
+                st.markdown(f"**Chunk {i}**")
+                st.code(chunk, language=None)
+
+        st.markdown(
+            f'<div class="answer-box"><strong>Answer</strong><br>{st.session_state.current_answer}</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_dl, _ = st.columns([1, 3])
+        
+        export_text = f"Question: {st.session_state.current_question}\n\nAnswer: {st.session_state.current_answer}"
+        
+        with col_dl:
+            st.download_button(
+                label="Download Answer",
+                data=export_text,
+                file_name="chatbot_answer.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
 
     render_footer()
 
