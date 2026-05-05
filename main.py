@@ -131,7 +131,7 @@ def generate_answer(context_chunks: List[str], question: str) -> str:
     context = "\n\n".join(context_chunks)
     prompt = build_prompt(context, question)
 
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=api_key)
     response = llm.invoke(prompt)
     return response.content.strip()
 
