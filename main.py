@@ -3,7 +3,7 @@ Smart PDF Chatbot
 =================
 A Streamlit web application that lets users upload PDF files and ask questions
 about their content. Uses HuggingFace embeddings, FAISS vector search, and
-a local Ollama LLM to generate answers.
+Google Gemini API to generate answers.
 """
 
 import streamlit as st
@@ -112,25 +112,26 @@ def build_prompt(context: str, question: str) -> str:
     )
 
 
-def generate_answer(context_chunks: List[str], question: str) -> str:
+def generate_answer(context_chunks: List[str], question: str, api_key: str) -> str:
     """
-    Generate an answer using the local Ollama LLM (phi model).
+    Generate an answer using Google Gemini API.
 
     Args:
         context_chunks: Relevant text chunks from the vector store.
         question: The user's question.
+        api_key: The Google API Key.
 
     Returns:
         The generated answer string.
     """
-    from langchain_ollama import OllamaLLM
+    from langchain_google_genai import ChatGoogleGenerativeAI
 
     context = "\n\n".join(context_chunks)
     prompt = build_prompt(context, question)
 
-    llm = OllamaLLM(model="phi")
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
     response = llm.invoke(prompt)
-    return response.strip()
+    return response.content.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -464,7 +465,7 @@ def process_uploaded_pdf(uploaded_file) -> Optional[object]:
         os.unlink(tmp_path)
 
 
-def handle_question(vector_store, question: str):
+def handle_question(vector_store, question: str, api_key: str):
     """Run similarity search + LLM and return chunks and answer."""
     with st.spinner("Searching for relevant passages..."):
         relevant_chunks = similarity_search(vector_store, question)
@@ -472,8 +473,8 @@ def handle_question(vector_store, question: str):
     if not relevant_chunks:
         return None, None
 
-    with st.spinner("Generating answer with Ollama (phi)..."):
-        answer = generate_answer(relevant_chunks, question)
+    with st.spinner("Generating answer with Google Gemini..."):
+        answer = generate_answer(relevant_chunks, question, api_key)
 
     return relevant_chunks, answer
 
@@ -487,7 +488,17 @@ def main():
     inject_custom_css()
     render_header()
 
+    # ---- Sidebar for Settings ----
+    with st.sidebar:
+        st.markdown("### Settings")
+        api_key = st.text_input("Google API Key", type="password", help="Get yours at aistudio.google.com")
+        st.markdown("### Info")
+        st.info("This app uses your Google Gemini API key to process questions.")
 
+    if not api_key:
+        st.warning("Please enter your Google API Key in the sidebar to use the chatbot.")
+        render_footer()
+        return
 
     # ---- File Upload ----
     st.markdown("### Upload your PDF")
@@ -511,6 +522,7 @@ def main():
     if "current_file_id" not in st.session_state or st.session_state.current_file_id != file_id:
         st.session_state.current_file_id = file_id
         st.session_state.vector_store = None
+        st.session_state.chat_history = []  # Added chat history
         st.session_state.pop("current_answer", None)
         st.session_state.pop("relevant_chunks", None)
         st.session_state.pop("current_question", None)
@@ -527,6 +539,16 @@ def main():
             unsafe_allow_html=True,
         )
 
+    # ---- Chat History Display ----
+    if "chat_history" in st.session_state and st.session_state.chat_history:
+        st.markdown("### Chat History")
+        for chat in st.session_state.chat_history:
+            st.markdown(
+                f'<div class="answer-box"><strong>Q: {chat["question"]}</strong><br><br>{chat["answer"]}</div>',
+                unsafe_allow_html=True
+            )
+        st.markdown("<br>", unsafe_allow_html=True)
+
     # ---- Question Input ----
     st.markdown("### Ask a Question")
     question = st.text_input(
@@ -537,11 +559,10 @@ def main():
 
     col1, col2, _ = st.columns([1, 1, 3])
     ask_clicked = col1.button("Get Answer", type="primary", use_container_width=True)
-    clear_clicked = col2.button("Clear", use_container_width=True)
+    clear_clicked = col2.button("Clear History", use_container_width=True)
 
     if clear_clicked:
-        st.session_state.vector_store = None
-        st.session_state.current_file_id = None
+        st.session_state.chat_history = []
         st.session_state.pop("current_answer", None)
         st.session_state.pop("relevant_chunks", None)
         st.session_state.pop("current_question", None)
@@ -552,46 +573,26 @@ def main():
             st.warning("Please enter a question before clicking Get Answer.")
         else:
             try:
-                chunks, ans = handle_question(st.session_state.vector_store, question.strip())
+                chunks, ans = handle_question(st.session_state.vector_store, question.strip(), api_key)
                 if chunks and ans:
                     st.session_state.relevant_chunks = chunks
                     st.session_state.current_answer = ans
                     st.session_state.current_question = question.strip()
+                    
+                    # Add to chat history
+                    if "chat_history" not in st.session_state:
+                        st.session_state.chat_history = []
+                    st.session_state.chat_history.append({
+                        "question": question.strip(),
+                        "answer": ans
+                    })
+                    st.rerun()
                 else:
                     st.warning("No relevant passages found in the document for your question.")
                     st.session_state.pop("current_answer", None)
             except Exception as e:
                 st.error(f"An error occurred while generating the answer:\n\n`{e}`")
-                st.info(
-                    "Make sure Ollama is running (`ollama serve`) and the **phi** model "
-                    "is available (`ollama pull phi`)."
-                )
-
-    # Display Answer and Export Options
-    if st.session_state.get("current_answer"):
-        with st.expander("Retrieved Context", expanded=False):
-            for i, chunk in enumerate(st.session_state.relevant_chunks, 1):
-                st.markdown(f"**Chunk {i}**")
-                st.code(chunk, language=None)
-
-        st.markdown(
-            f'<div class="answer-box"><strong>Answer</strong><br>{st.session_state.current_answer}</div>',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_dl, _ = st.columns([1, 3])
-        
-        export_text = f"Question: {st.session_state.current_question}\n\nAnswer: {st.session_state.current_answer}"
-        
-        with col_dl:
-            st.download_button(
-                label="Download Answer",
-                data=export_text,
-                file_name="chatbot_answer.txt",
-                mime="text/plain",
-                use_container_width=True
-            )
+                st.info("Make sure your Google API Key is valid and has access to the Gemini model.")
 
     render_footer()
 
