@@ -3,7 +3,7 @@ Smart PDF Chatbot
 =================
 A Streamlit web application that lets users upload PDF files and ask questions
 about their content. Uses HuggingFace embeddings, FAISS vector search, and
-Google Gemini API to generate answers.
+a local Ollama LLM to generate answers.
 """
 
 import streamlit as st
@@ -112,26 +112,25 @@ def build_prompt(context: str, question: str) -> str:
     )
 
 
-def generate_answer(context_chunks: List[str], question: str, api_key: str) -> str:
+def generate_answer(context_chunks: List[str], question: str) -> str:
     """
-    Generate an answer using Google Gemini API.
+    Generate an answer using the local Ollama LLM (phi model).
 
     Args:
         context_chunks: Relevant text chunks from the vector store.
         question: The user's question.
-        api_key: The Google API Key.
 
     Returns:
         The generated answer string.
     """
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_ollama import OllamaLLM
 
     context = "\n\n".join(context_chunks)
     prompt = build_prompt(context, question)
 
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
+    llm = OllamaLLM(model="phi")
     response = llm.invoke(prompt)
-    return response.content.strip()
+    return response.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -465,7 +464,7 @@ def process_uploaded_pdf(uploaded_file) -> Optional[object]:
         os.unlink(tmp_path)
 
 
-def handle_question(vector_store, question: str, api_key: str):
+def handle_question(vector_store, question: str):
     """Run similarity search + LLM and return chunks and answer."""
     with st.spinner("Searching for relevant passages..."):
         relevant_chunks = similarity_search(vector_store, question)
@@ -473,8 +472,8 @@ def handle_question(vector_store, question: str, api_key: str):
     if not relevant_chunks:
         return None, None
 
-    with st.spinner("Generating answer with Google Gemini..."):
-        answer = generate_answer(relevant_chunks, question, api_key)
+    with st.spinner("Generating answer with Ollama (phi)..."):
+        answer = generate_answer(relevant_chunks, question)
 
     return relevant_chunks, answer
 
@@ -488,17 +487,7 @@ def main():
     inject_custom_css()
     render_header()
 
-    # ---- Sidebar for Settings ----
-    with st.sidebar:
-        st.markdown("### Settings")
-        api_key = st.text_input("Google API Key", type="password", help="Get yours at aistudio.google.com")
-        st.markdown("### Info")
-        st.info("This app uses your Google Gemini API key to process questions.")
 
-    if not api_key:
-        st.warning("Please enter your Google API Key in the sidebar to use the chatbot.")
-        render_footer()
-        return
 
     # ---- File Upload ----
     st.markdown("### Upload your PDF")
@@ -563,7 +552,7 @@ def main():
             st.warning("Please enter a question before clicking Get Answer.")
         else:
             try:
-                chunks, ans = handle_question(st.session_state.vector_store, question.strip(), api_key)
+                chunks, ans = handle_question(st.session_state.vector_store, question.strip())
                 if chunks and ans:
                     st.session_state.relevant_chunks = chunks
                     st.session_state.current_answer = ans
@@ -573,7 +562,10 @@ def main():
                     st.session_state.pop("current_answer", None)
             except Exception as e:
                 st.error(f"An error occurred while generating the answer:\n\n`{e}`")
-                st.info("Make sure your Google API Key is valid and has access to the Gemini model.")
+                st.info(
+                    "Make sure Ollama is running (`ollama serve`) and the **phi** model "
+                    "is available (`ollama pull phi`)."
+                )
 
     # Display Answer and Export Options
     if st.session_state.get("current_answer"):
