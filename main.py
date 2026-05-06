@@ -116,7 +116,7 @@ def build_prompt(context: str, question: str) -> str:
 
 def generate_answer(context_chunks: List[str], question: str) -> str:
     """
-    Generate an answer using the Google Gemini API.
+    Generate an answer using a free, keyless AI text generation API.
 
     Args:
         context_chunks: Relevant text chunks from the vector store.
@@ -125,23 +125,26 @@ def generate_answer(context_chunks: List[str], question: str) -> str:
     Returns:
         The generated answer string.
     """
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    
-    # Get API key from Streamlit secrets or environment variables
-    try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-    except (KeyError, FileNotFoundError):
-        api_key = os.environ.get("GOOGLE_API_KEY")
-        
-    if not api_key:
-        raise ValueError("Google API Key not found. Please configure GOOGLE_API_KEY in Streamlit secrets or environment variables.")
+    import requests
+    import json
 
     context = "\n\n".join(context_chunks)
     prompt = build_prompt(context, question)
 
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=api_key)
-    response = llm.invoke(prompt)
-    return response.content.strip()
+    url = "https://text.pollinations.ai/"
+    payload = {
+        "messages": [
+            {"role": "system", "content": "You are a helpful and intelligent assistant. Keep your answers concise and accurate."},
+            {"role": "user", "content": prompt}
+        ],
+        "model": "openai"
+    }
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    response.raise_for_status()  # raise an exception if it failed
+    
+    return response.text.strip()
 
 
 # ---------------------------------------------------------------------------
