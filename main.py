@@ -127,8 +127,14 @@ def generate_answer(context_chunks: List[str], question: str) -> str:
     """
     from langchain_google_genai import ChatGoogleGenerativeAI
     
-    # Hardcoded API key provided by the user to make the app public for everyone
-    api_key = "AIzaSyB6aBjp1Re5u_QWO69wL4938_cnKNdvRWc"
+    # Get API key from Streamlit secrets or environment variables
+    try:
+        api_key = st.secrets["GOOGLE_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        
+    if not api_key:
+        raise ValueError("Google API Key not found. Please configure GOOGLE_API_KEY in Streamlit secrets or environment variables.")
 
     context = "\n\n".join(context_chunks)
     prompt = build_prompt(context, question)
