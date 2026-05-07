@@ -166,18 +166,22 @@ def inject_custom_css():
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
         /* ---------- Global ---------- */
-        html, body, [class*="css"] {
-            font-family: 'Caveat', cursive;
-            color: #1e293b;
-            font-size: 1.3rem;
-            background-color: #fdfbf7;
+        html, body, [class*="css"], h1, h2, h3, h4, h5, h6, p, span, label {
+            font-family: 'Caveat', cursive !important;
+            color: #1e293b !important;
+            background-color: transparent;
+        }
+        
+        /* Force Streamlit markdown text to be dark, countering dark mode */
+        div[data-testid="stMarkdownContainer"] * {
+            color: #1e293b !important;
         }
         
         .stApp {
-            background-color: #fdfbf7;
+            background-color: #fdfbf7 !important;
             background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
             background-size: 25px 25px;
         }
@@ -255,16 +259,19 @@ def inject_custom_css():
         }
 
         /* ---------- Answer Box ---------- */
+        .answer-box, .answer-box * {
+            font-family: 'Inter', system-ui, sans-serif !important;
+        }
         .answer-box {
             background: #ffffff;
-            border: 3px solid #1e293b;
-            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
-            padding: 1.5rem;
-            margin-top: 1rem;
-            line-height: 1.6;
-            font-size: 1.4rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin-top: 1.5rem;
+            line-height: 1.8;
+            font-size: 1.25rem;
             color: #1e293b;
-            box-shadow: 6px 6px 0px #1e293b;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
             animation: slideUp 0.5s ease-out;
         }
         
@@ -273,16 +280,62 @@ def inject_custom_css():
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .answer-box strong {
+        .answer-box-label {
             color: #4f46e5;
-            font-size: 1.2rem;
-            letter-spacing: 1px;
+            font-size: 1.1rem;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
             font-weight: 700;
-            text-decoration: underline;
-            text-decoration-style: wavy;
+            border-bottom: 2px solid #e0e7ff;
+            padding-bottom: 0.5rem;
+        }
+
+        /* Markdown elements inside answer-box */
+        .answer-box p { margin-bottom: 1rem; }
+        .answer-box p:last-child { margin-bottom: 0; }
+        .answer-box strong { font-weight: 700; color: #0f172a; }
+        .answer-box ul, .answer-box ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .answer-box li { margin-bottom: 0.5rem; }
+        .answer-box table {
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .answer-box th, .answer-box td {
+            padding: 12px 15px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+            min-width: 120px;
+            white-space: normal;
+        }
+        .answer-box th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+        .answer-box code {
+            background-color: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+        .answer-box pre {
+            background-color: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        .answer-box pre code {
+            background-color: transparent;
+            padding: 0;
         }
 
         /* ---------- Footer ---------- */
@@ -352,6 +405,14 @@ def inject_custom_css():
         div.stTextInput > div > div > input:focus {
             box-shadow: 6px 6px 0px #1e293b !important;
             background-color: #fef08a !important;
+        }
+        div.stTextInput > div > div > input::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
+        }
+        div[data-testid="InputInstructions"] > span {
+            color: #64748b !important;
+            font-size: 0.9rem !important;
         }
         
         /* Expander */
@@ -579,13 +640,19 @@ def main():
 
     # Display Answer and Export Options
     if st.session_state.get("current_answer"):
-        with st.expander("Retrieved Context", expanded=False):
+        with st.expander(" ", expanded=False):
             for i, chunk in enumerate(st.session_state.relevant_chunks, 1):
                 st.markdown(f"**Chunk {i}**")
                 st.code(chunk, language=None)
 
+        import markdown
+        html_answer = markdown.markdown(
+            st.session_state.current_answer,
+            extensions=['tables', 'fenced_code']
+        )
+        
         st.markdown(
-            f'<div class="answer-box"><strong>Answer</strong><br>{st.session_state.current_answer}</div>',
+            f'<div class="answer-box"><span class="answer-box-label">Answer</span>{html_answer}</div>',
             unsafe_allow_html=True,
         )
 
