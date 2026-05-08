@@ -1,4 +1,4 @@
-cat > README.md << 'EOF'
+
 #  Smart PDF Chatbot
 
 An AI-powered PDF Question Answering application built using Streamlit, LangChain, FAISS, HuggingFace Embeddings, and Google Gemini API.
