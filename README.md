@@ -1,105 +1,141 @@
-# 📄 Smart PDF Chatbot
+cat > README.md << 'EOF'
+#  Smart PDF Chatbot
 
-A Streamlit web application that lets you upload a PDF and ask questions about its content using local AI.
+An AI-powered PDF Question Answering application built using Streamlit, LangChain, FAISS, HuggingFace Embeddings, and Google Gemini API.
 
-**Tech Stack:** Streamlit · HuggingFace (all-MiniLM-L6-v2) · FAISS · Ollama (phi)
-
----
-
-## Prerequisites
-
-| Requirement | Details |
-|---|---|
-| **Python** | 3.9 or higher |
-| **Ollama** | Installed and running locally ([download](https://ollama.com)) |
-| **phi model** | Pulled via Ollama (see below) |
+Users can upload PDF documents and ask questions in natural language. The chatbot retrieves relevant content from the PDF and generates intelligent answers using Retrieval-Augmented Generation (RAG).
 
 ---
 
-## Installation Steps
+#  Features
 
-### 1. Clone / navigate to the project folder
+-  Upload PDF documents
+-  Ask questions from uploaded PDFs
+-  Semantic search using FAISS vector database
+-  AI-powered answers using Gemini API
+-  Modern chatbot-style UI
+-  Fast document retrieval
+-  Clean and responsive Streamlit interface
 
-```bash
-cd "smart pdf"
-```
+---
 
-### 2. Create a virtual environment (recommended)
+#  Tech Stack
 
-```bash
+- Python
+- Streamlit
+- LangChain
+- FAISS
+- HuggingFace Embeddings
+- Google Gemini API
+- Sentence Transformers
+- PyPDF
+
+---
+
+#  How It Works
+
+1. User uploads a PDF document
+2. PDF text is extracted and split into chunks
+3. Text chunks are converted into embeddings
+4. Embeddings are stored in a FAISS vector database
+5. User asks a question
+6. Relevant chunks are retrieved using similarity search
+7. Gemini API generates the final response
+
+---
+
+#  Installation
+
+## 1️ Clone Repository
+
+\`\`\`bash
+git clone https://github.com/Aj230910/smart-pdf-chatbot.git
+cd smart-pdf-chatbot
+\`\`\`
+
+---
+
+## 2️ Create Virtual Environment
+
+\`\`\`bash
 python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS / Linux
-```
+\`\`\`
 
-### 3. Install Python dependencies
+### Activate Environment
 
-```bash
+#### Windows
+\`\`\`bash
+venv\Scripts\activate
+\`\`\`
+
+#### Mac/Linux
+\`\`\`bash
+source venv/bin/activate
+\`\`\`
+
+---
+
+## 3️ Install Dependencies
+
+\`\`\`bash
 pip install -r requirements.txt
-```
-
-### 4. Install & start Ollama
-
-Download Ollama from [https://ollama.com](https://ollama.com) and install it.
-
-Then pull the **phi** model:
-
-```bash
-ollama pull phi
-```
-
-Make sure Ollama is running before launching the app:
-
-```bash
-ollama serve
-```
-
-> **Note:** On Windows, Ollama typically runs as a background service after installation.
+\`\`\`
 
 ---
 
-## How to Run the App
+#  Setup Gemini API Key
 
-```bash
+Create a `.env` file:
+
+\`\`\`env
+GOOGLE_API_KEY=your_api_key_here
+\`\`\`
+
+Or use Streamlit Secrets:
+
+\`\`\`toml
+GOOGLE_API_KEY = "your_api_key_here"
+\`\`\`
+
+---
+
+#  Run Application
+
+\`\`\`bash
 streamlit run main.py
-```
-
-The app will open in your browser at **http://localhost:8501**.
+\`\`\`
 
 ---
 
-## How It Works
+#  Project Structure
 
-```
-PDF Upload  →  Text Extraction (PyPDF2)
-            →  Chunking (500 chars, 100 overlap)
-            →  Embeddings (all-MiniLM-L6-v2)
-            →  FAISS Vector Store
-
-User Question  →  Similarity Search (top 4 chunks)
-               →  LLM Prompt Construction
-               →  Ollama (phi) generates answer
-               →  Answer displayed in UI
-```
+\`\`\`bash
+smart-pdf-chatbot/
+│
+├── main.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+└── assets/
+\`\`\`
 
 ---
 
-## Project Structure
+#  Future Improvements
 
-```
-smart pdf/
-├── main.py              # Complete application (single file)
-├── requirements.txt     # Python dependencies
-└── README.md            # This file
-```
+-  Dark mode toggle
+-  Chat history memory
+-  Multiple PDF support
+-  Voice input
+-  Cloud deployment
+-  Source highlighting
+-  Mobile responsive UI
 
 ---
 
-## Troubleshooting
+#  Author
 
-| Issue | Solution |
-|---|---|
-| **"Connection refused" from Ollama** | Run `ollama serve` or check that the Ollama service is running |
-| **"Model not found"** | Run `ollama pull phi` to download the model |
-| **No text extracted from PDF** | The PDF may be scanned/image-based — only text PDFs are supported |
-| **Slow first query** | The embedding model downloads on first use (~80 MB); subsequent runs are cached |
+Ambrish Jeyan
+
+---
+
